@@ -1,0 +1,20 @@
+{
+  "name": "electron_modelo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron main.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bootstrap": "^4.0.0-beta",
+    "electron": "^1.8.2",
+    "gasparesganga-jquery-message-box": "^2.2.1",
+    "jquery": "^3.3.1",
+    "mysql": "^2.15.0",
+    "popper.js": "^1.12.9",
+    "select2-bootstrap-theme": "0.1.0-beta.10"
+  }
+}

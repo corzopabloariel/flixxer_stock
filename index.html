@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./node_modules/gasparesganga-jquery-message-box/src/messagebox.css">
+
+    <link href="./css/fontawesome-all.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/style.css">
+    <title>FLIXXER :: Bienvenido</title>
+  </head>
+  <body>
+    <script>
+    window.jQuery = window.$ = require('jquery');
+    </script>
+    <script src="./node_modules/jquery/dist/jquery.js"></script>
+    <script src="./node_modules/popper.js/dist/umd/popper.js"></script>
+    <script src="./node_modules/bootstrap/dist/js/bootstrap.js"></script>
+    <script src="./node_modules/gasparesganga-jquery-message-box/src/messagebox.js"></script>
+    <script src="./js/md5.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        $("input[required]").blur(function(){
+          if($(this).val() != "")
+            $(this).parent().find(".invalid-tooltip").addClass("none");
+          else
+            $(this).parent().find(".invalid-tooltip").removeClass("none");
+        })
+        $(".label-form input").focus(function() {
+          $(this).parent().find("label").animate({
+            top:-20,
+            left:5,
+            fontSize: 14
+          })
+        }).blur(function() {
+          if($(this).val() == "") {
+            $(this).parent().find("label").animate({
+              top:5,
+              left:5,
+              fontSize: 18
+            })
+          }
+        });
+      });
+
+      $(document).keypress(function(e) {
+        if(e.which == 13) {
+          $("button").focus()
+        }
+      })
+    </script>
+    <span id="span"></span>
+    <div class="d-flex align-items-center justify-content-center" id="div">
+      <div class="f-ingreso" style=" width:400px; background:#fff; border-radius:5px; padding: 2em;-webkit-box-shadow: 0 0 10px 1px rgba(0,0,0,0.1);
+box-shadow: 0 0 10px 1px rgba(0,0,0,0.1); color: #6AB9DF; border: 1px solid #ccc; position: relative">
+        <h1 class="text-center" id="form_h1"><i class="fas fa-sign-in-alt"></i> Ingreso</h1>
+        <form style="padding-top:2em" id="form_login" class="needs-validation" novalidate>
+          <div class="form-row label-form" style="position:relative;margin-bottom:20px;">
+            <div class="col-md">
+              <label for="form-email" style="position:absolute; top: 5px; left:5px; color:#999">E-mail o usuario</label>
+              <input type="text" class="form-control" id="form-email" style="font-family: inherit; border: none;border-bottom: 1px solid #ccc;border-radius: 0px;padding: .5rem 0;" required>
+              <div class="invalid-tooltip">
+                Ingrese E-mail o Usuario
+              </div>
+            </div>
+          </div>
+          <input type="submit" class="btn btn-primary btn-lg btn-block" value="Continuar" />
+        </form>
+        <form style="padding-top:2em" id="form_login_IN" class="needs-validation none" novalidate>
+          <input type="hidden" id="user-did" value=""/>
+          <div class="form-row label-form" style="position:relative;margin-bottom:20px;">
+            <div class="col-md">
+              <label for="form-clave" style="position:absolute; top: 5px; left:5px; color:#999">Clave</label>
+              <input type="password" class="form-control" id="form-clave" style="font-family: inherit; border: none;border-bottom: 1px solid #ccc;border-radius: 0px;padding: .5rem 0;" required>
+              <div class="invalid-tooltip">
+                Ingrese clave
+              </div>
+            </div>
+          </div>
+          <input type="submit" class="btn btn-primary btn-lg btn-block" value="Ingresar" />
+          <p class="text-center" style="margin:0px; position: absolute; width:100%; top:300px; left: 0px"><a href="index.html">Acceder con otro usuario</a></p>
+        </form>
+        <script>
+        const electron = require('electron');
+        const {ipcRenderer} = electron;
+        var lugar = 0;
+        (function() {
+          'use strict';
+          window.addEventListener('load', function() {
+            var forms = document.getElementsByClassName('needs-validation');
+            var validation = Array.prototype.filter.call(forms, function(form) {
+              form.addEventListener('submit', function(event) {
+                form.classList.add('was-validated');
+                event.preventDefault();
+                if (form.checkValidity() === false) {
+                  event.stopPropagation();
+                  return;
+                }
+                var elements = form.elements;
+                for (var i = 0, len = elements.length; i < len; ++i) {
+                  elements[i].disabled = true;
+                }
+                if(lugar == 0) {
+                  const dato = document.querySelector('#form-email').value;
+                  ipcRenderer.send('login:primer',dato);
+                } else {
+                  const clave = MD5(document.querySelector('#form-clave').value);
+                  const user_did = document.querySelector('#user-did').value;
+                  var datos = {"clave" : clave, "usuario" : user_did};
+                  ipcRenderer.send('login:segundo',datos);
+                }
+              }, false);
+            });
+          }, false);
+        })();
+
+        ipcRenderer.on('login:segundo',function(e, did) {
+          $("#user-did").val(did);
+          lugar = 1;
+          $("#form_login").addClass("none");
+          $("#form_login_IN").removeClass("none");
+          $("#form_h1").removeClass("text-center").html('Hola <strong>'+valor.user+'</strong>')
+        });
+
+        ipcRenderer.on('login:primer:error',function(e) {
+          $("*[disabled]").removeAttr("disabled");
+          $.MessageBox("Usuario o e-mail incorrecto");
+        });
+        ipcRenderer.on('login:segundo:error',function(e) {
+          $.MessageBox("Clave incorrecta");
+          $("*[disabled]").removeAttr("disabled");
+        });
+        </script>
+      </div>
+    </div>
+  </body>
+</html>

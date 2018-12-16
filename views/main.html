@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./../node_modules/gasparesganga-jquery-message-box/src/messagebox.css">
+    <link rel="stylesheet" href="./../node_modules/select2-bootstrap-theme/dist/select2-bootstrap.css">
+
+    <link href="./../css/fontawesome-all.css" rel="stylesheet">
+    <link href="./../css/select2.css" rel="stylesheet">
+    <link rel="stylesheet" href="./../css/style.css">
+
+    <title>FLIXXER :: Principal</title>
+  </head>
+  <body>
+    <script>
+    window.jQuery = window.$ = require('jquery');
+    </script>
+    <script src="./../node_modules/jquery/dist/jquery.js"></script>
+    <script src="./../node_modules/popper.js/dist/umd/popper.js"></script>
+    <script src="./../node_modules/bootstrap/dist/js/bootstrap.js"></script>
+    <script src="./../node_modules/gasparesganga-jquery-message-box/src/messagebox.js"></script>
+    <script src="./../js/select2.min.js"></script>
+    <script src="./../js/md5.js"></script>
+
+    <script>
+    const electron = require('electron');
+    const {ipcRenderer,remote} = electron;
+    const main = remote.require("./main.js");
+
+    ipcRenderer.on('modal:producto',function(e) {
+      $("#modal_producto").modal("show");
+    });
+    ipcRenderer.on('modal:categoria',function(e) {
+      $("#modal-categoria").modal("show");
+    });
+
+    $(document).ready(function() {
+      $("body").tooltip({
+        selector: '[data-toggle="tooltip"]'
+      });
+      $(".wrapper").load("main.main.html", function(responseTxt, statusTxt, xhr) {
+        if(statusTxt == "success")
+          actualizar_main(ipcRenderer);
+      });
+
+      $('#modal-categoria').on('show.bs.modal', function (e) {
+        ipcRenderer.send('categorias:padre');
+      });
+      $('#modal-categoria').on('hidden.bs.modal', function (e) {
+        limpiar_modal_categoria();
+      })
+      $('#modal_producto').on('show.bs.modal', function (e) {
+        ipcRenderer.send('categorias:todas');
+      });
+
+      $("#radio_subcategoria").click(function() {
+        $("#div_tipo").removeClass("none");
+        $("#div_tipo").find('select option:first-child').attr('selected', 'selected');
+      });
+      $("#radio_categoria").click(function() {
+        $("#div_tipo").find('select option:first-child').attr('selected', 'selected');
+        $("#div_tipo").addClass("none");
+      });
+
+      $(document).on("focus","#precio-prod",function(event){
+        $(event.target).select();
+      }).on("keyup","#precio-prod",function(event){
+        $(event.target).val(function (index, value ) {
+        var signo = "";
+        if(value == "$" || value == "-$" || value == "" || value == "$ " || value == "-$ ")
+          return "";
+        if(value[0] == "-")
+          signo = "-";
+        if(value[0] == "+")
+          signo = "";
+        return signo+"$ "+value.replace(/\D/g, "")
+                .replace(/([0-9])([0-9]{2})$/, '$1,$2')
+                .replace(/\B(?=(\d{3})+(?!\d)\.?)/g, ".");
+        });
+      }).on("focusout","#precio-prod",function(event){
+        $(event.target).val(function (index, value ) {
+        var valor = value.replace("$ ","");
+        if(valor == "")
+            return "";
+        var regx = "/[.]/g";
+        valor = valor.replace(eval(regx),"");
+        valor = valor.replace(",",".");
+        var str_valor = ((valor < 0) ? "-$ "+formatearNumero(valor*-1) : "$ "+formatearNumero(valor));
+        return str_valor;
+        });
+      }).on("keyup","#precio-prod",function(e){
+        if($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 || (e.keyCode == 65 && e.ctrlKey === true) || (e.keyCode >= 35 && e.keyCode <= 39)) {
+        	return;
+        }
+
+        if((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+        	e.preventDefault();
+        }
+      }).on("keypress", "#precio-prod", function(e) { //----->SOLO NUMEROS
+        var letras = '0123456789-';
+        var key = e.which,
+        keye = e.keyCode,
+        tecla = String.fromCharCode(key).toLowerCase();
+        if (keye != 13) {
+        if (letras.indexOf(tecla) == -1 && keye != 9 && (key == 37 || keye != 37) && (keye != 39 || key == 39) && keye != 8 && (keye != 46 || key == 46) || key == 161)
+            e.preventDefault();
+        }
+      });
+    }).on("click",".nav-ul a",function(e) {
+      e.preventDefault();
+      var url = $(this).attr("href");
+      //$(".wrapper").load(url);
+      switch (url) {
+        case 'main.main.html':
+          $(".wrapper").load("main.main.html", function(responseTxt, statusTxt, xhr) {
+            if(statusTxt == "success")
+              actualizar_main(ipcRenderer);
+          });
+
+          break;
+        case 'main.perfil.html':
+          $(".wrapper").load("main.perfil.html", function(responseTxt, statusTxt, xhr) {
+            if(statusTxt == "success")
+              trear_perfil(ipcRenderer);
+          });
+          break;
+        case 'main.datos.html':
+          $(".wrapper").load("main.datos.html", function(responseTxt, statusTxt, xhr) {
+            if(statusTxt == "success")
+              actualizar_datos(ipcRenderer);
+          });
+          break;
+      }
+    }).on("click","#tabla-categorias tr",function() {
+      var did = $(this).data("did");
+      ipcRenderer.send('categoria:buscar',did);
+    }).on("click","*[data-categoria][data-eliminar]",function(){
+      var did_cat = $(this).data("categoria");
+      $.MessageBox({
+        buttonDone  : "Si",
+        buttonFail  : "No",
+        message     : "¿Está segur@ de eliminar el dato?"
+      }).done(function(){
+        ipcRenderer.send('categoria:eliminar',did_cat);
+      }).fail(function(){
+      });
+    }).on("click",".arrow-menu[data-on]",function() {
+      $(".sidebar").fadeOut(100);
+      $(".main-panel").animate({
+        width:"100%"
+      },300);
+      $(".arrow-menu[data-off]").animate({
+        left:0
+      },300);
+    }).on("click",".arrow-menu[data-off]",function() {
+      $(".sidebar").fadeIn(300);
+      $(".main-panel").animate({
+        width: $(window).width() - 260
+      },100);
+      $(".arrow-menu[data-off]").animate({
+        left:-50
+      },100);
+    }).on("click","#modal-tabla_categorias tr td p input",function() {
+      if($(this).is(":checked"))
+        $(this).parent().parent().parent().addClass("bg-info");
+      else
+        $(this).parent().parent().parent().removeClass("bg-info");
+    }).on("click",".categoria-eliminar_modal",function() {
+      var did = $(this).data("did");
+      $.MessageBox({
+        buttonDone  : "Si",
+        buttonFail  : "No",
+        message     : "¿Está segur@ de eliminar el dato?"
+      }).done(function(){
+        if(ipcRenderer.sendSync('categoria:eliminar:tabla',did)) {
+          actualizar_tablaCategoria(ipcRenderer);
+          actualizar_main(ipcRenderer);
+        }
+      }).fail(function(){
+      });
+    }).on("click","#perfil_personal",function() {
+      var nombre = ($("#perfil_nombre").val() == "null") ? "" : $("#perfil_nombre").val();
+      var apellido = ($("#perfil_apellido").val() == "null") ? "" : $("#perfil_apellido").val();
+      var tipo_documento = ($("#perfil_tdoc").val() == "null") ? "DNI" : $("#perfil_tdoc").val();
+      var documento = ($("#perfil_documento").val() == "null") ? "" : $("#perfil_documento").val();
+      $.MessageBox({
+          buttonDone      : "Editar",
+          buttonFail      : "Cerrar",
+          message : "<h3 class='text-center'>Datos personales</h3>",
+          input   : {
+              nombre    : {
+                  type        : "text",
+                  title       : "Nombre",
+                  maxlength   : 60,
+                  default     : nombre
+              },
+              apellido    : {
+                  type        : "text",
+                  title       : "Apellido",
+                  maxlength   : 70,
+                  default     : apellido
+              },
+              tipo_documento : {
+                  type    : "select",
+                  title   : "Seleccione el tipo de documento",
+                  options : ["DNI", "CUIL", "CUIT", "CI", "LC", "LE"],
+                  default : tipo_documento
+              },
+              documento    : {
+                  type        : "text",
+                  title       : tipo_documento,
+                  maxlength   : 20,
+                  default     : documento
+              },
+          },
+          filterDone      : function(data){
+            if(data["nombre"] == "") return "Faltan datos";
+            if(data["apellido"] == "") return "Faltan datos";
+            if(data["documento"] == "") return "Faltan datos";
+          }
+      }).done(function(data){
+          ipcRenderer.send('perfil:datos:personales',data);
+      });
+    }).on("click","#perfil_sistema_email",function() {
+      var email = ($("#perfil_email").val() == "null") ? "" : $("#perfil_email").val();
+      $.MessageBox({
+          buttonDone      : "Editar",
+          buttonFail      : "Cerrar",
+          message : "<h3 class='text-center'>Datos del sistema</h3>",
+          input   : {
+              email    : {
+                  type        : "text",
+                  title       : "E-mail",
+                  maxlength   : 100,
+                  default     : email
+              },
+              clave    : {
+                  type        : "password",
+                  title       : "Clave",
+              },
+          },
+          filterDone      : function(data){
+            if(data["clave"] == "" || data["email"] == "") return "Faltan datos";
+            if(data["clave"] != "") {
+              var clave = MD5(data["clave"]);
+              return (ipcRenderer.sendSync('perfil:clave',clave));
+            }
+
+            if(data["email"] == "") {
+              if(!validarEmail(data["email"])) return "E-mail no válido";
+            }
+          }
+      }).done(function(data){
+          ipcRenderer.send('perfil:datos:email',data.email);
+      });
+    }).on("click","#perfil_sistema_clave",function() {
+      $.MessageBox({
+          buttonDone      : "Editar",
+          buttonFail      : "Cerrar",
+          message : "<h3 class='text-center'>Datos del sistema</h3>",
+          input   : {
+              clave_actual    : {
+                  type        : "password",
+                  title       : "Clave actual",
+              },
+              clave_1    : {
+                  type        : "password",
+                  title       : "Clave nueva",
+              },
+              clave_2    : {
+                  type        : "password",
+                  title       : "Repita clave nueva",
+              },
+          },
+          filterDone      : function(data){
+            if(data["clave_actual"] == "" || data["clave_1"] == "" || data["clave_2"] == "") return "Faltan datos";
+
+            var clave = MD5(data["clave_actual"]);
+            var clave_1 = MD5(data["clave_1"]);
+            var clave_2 = MD5(data["clave_2"]);
+            var clave_len = data["clave_1"].length;
+            data.clave_len = clave_len
+            data.clave_1 = clave_1;
+            data.clave_2 = clave_2;
+            console.log(data)
+            if(clave_1 != clave_2) return "Claves no coinciden";
+            if(data["clave_actual"] != "") return (ipcRenderer.sendSync('perfil:clave',clave));
+          }
+      }).done(function(data){
+          ipcRenderer.send('perfil:datos:clave',data);
+      });
+    }).on("click","#perfil_sistema_usuario",function() {
+      var usuario = ($("#perfil_usuario").val() == "null") ? "" : $("#perfil_usuario").val();
+      $.MessageBox({
+          buttonDone      : "Editar",
+          buttonFail      : "Cerrar",
+          message : "<h3 class='text-center'>Datos del sistema</h3>",
+          input   : {
+              usuario    : {
+                  type        : "text",
+                  title       : "Usuario",
+                  maxlength   : 30,
+                  default     : usuario
+              },
+              clave    : {
+                  type        : "password",
+                  title       : "Clave",
+              },
+          },
+          filterDone      : function(data){
+            if(data["clave"] == "" || data["usuario"] == "") return "Faltan datos";
+
+            var clave = MD5(data["clave"]);
+            data.clave = clave;
+
+            if(data["usuario"] != "") return (ipcRenderer.sendSync('perfil:usuario',data.usuario));
+            if(data["clave"] != "") return (ipcRenderer.sendSync('perfil:clave',clave));
+          }
+      }).done(function(data){
+          ipcRenderer.send('perfil:datos:usuario',data);
+      });
+    }).on("change",'select[name="tipo_documento"]',function() {
+      var valor = $(this).val();
+      console.log(valor)
+      $('input[name="documento"]').attr("title",valor);
+      $('input[name="documento"]').attr("placeholder",valor);
+    });
+
+    ipcRenderer.on('perfil',function(e,html) {
+      $(".main-panel > .content .container-fluid").html(html);
+    });
+    ipcRenderer.on('categoria:eliminar',function(e,v) {
+      if(v == "modal") {
+        $("#form-categoria-ver").html("");
+        $("#modal-categoria_ver").modal("hide");
+        actualizar_datos(ipcRenderer);
+      } else if(v == "modal_tabla") {
+        ipcRenderer.send('categorias:modal');
+        ipcRenderer.send('categorias:datos');
+      }
+    });
+    ipcRenderer.on('categorias:padre',function(e,v) {
+      if(v == "") {
+        $("#select-categorias-padre").html('<option value="0">Sin categorías</option>');
+        $("#select-categorias-padre").attr("disabled","disabled");
+      } else {
+        $("#select-categorias-padre").html(v);
+        $('#select-categorias-padre').select2({
+        width: 'resolve'
+        });
+      }
+    });
+    ipcRenderer.on('categorias:todas',function(e,v) {
+      if(v == "") {
+        $("#select-categorias").html('<option value="0">Sin categorías</option>');
+        $("#select-categorias").attr("disabled","disabled");
+      } else
+        $("#select-categorias").html(v);
+    });
+    ipcRenderer.on('categoria:modal',function(e,v) {
+      $("#form-categoria-ver").html(v);
+      $("#modal-categoria_ver").modal("show");
+    });
+    ipcRenderer.on('categoria:alta:error_nombre',function() {
+      $("*[disabled]").removeAttr("disabled");
+      $(".was-validated").removeClass("was-validated");
+      $.MessageBox("Nombre en uso");
+    });
+    ipcRenderer.on('categoria:alta',function() {
+      limpiar_modal_categoria();
+      $("*[disabled]").removeAttr("disabled");
+      $(".was-validated").removeClass("was-validated");
+      $("#modal-categoria").modal("hide");
+      actualizar_main(ipcRenderer);
+    });
+
+    ipcRenderer.on('perfil:datos',function(e,v) {
+      trear_perfil(ipcRenderer);
+    });
+
+    function trear_perfil(ipcRenderer) {
+      $("#perfil_html").html(ipcRenderer.sendSync('perfil'));
+    }
+    function validarEmail(email) {
+      var reg = /^[A-Z0-9_'%=+!`#~$*?^{}&|-]+([\.][A-Z0-9_'%=+!`#~$*?^{}&|-]+)*@[A-Z0-9-]+(\.[A-Z0-9-]+)+$/i;
+      console.log(reg.test(email))
+      console.log(email)
+      if (reg.test(email) == false) return false;
+      return true;
+    }
+    function eliminar_categorias() {
+      var dids = [];
+      $("tr[data-did].bg-info").each(function() {
+        dids.push($(this).data("did"));
+      });
+      //
+      console.log(dids)
+      if(dids.length == 0) {
+        $.MessageBox("Seleccione filas");
+      } else {
+        $.MessageBox({
+          buttonDone  : "Si",
+          buttonFail  : "No",
+          message     : "¿Está segur@ de eliminar los datos seleccionados?"
+        }).done(function(){
+          if(ipcRenderer.sendSync('categoria:eliminar:seleccion',dids)) {
+            actualizar_tablaCategoria(ipcRenderer)
+            actualizar_main(ipcRenderer);
+          }
+        }).fail(function(){
+        });
+      }
+    }
+    function editar_categorias() {}
+    function categorias_seleccionar() {
+      $("#modal-tabla_categorias tr").each(function() {
+        if($(this).find("td:first-child input").is(":checked")) {
+          $(this).removeClass("bg-info");
+          $(this).find("td:first-child input").prop("checked",false);
+        } else {
+          $(this).find("td:first-child input").prop("checked",true)
+          $(this).addClass("bg-info");
+        }
+      });
+    }
+    function actualizar_datos(ipcRenderer) {
+      ipcRenderer.send('categorias:tabla');
+      ipcRenderer.on('categorias:tabla',function(e,v) {
+        $("#tabla-categorias").html(v);
+      });
+    }
+    function actualizar_tablaCategoria(ipcRenderer) {
+      $("#modal-tabla_categorias").html(ipcRenderer.sendSync('categorias:modal'));
+      if($("#modal-categoria_listado").is(":hidden")) $("#modal-categoria_listado").modal("show");
+    }
+    function actualizar_main(ipcRenderer) {
+      console.log(ipcRenderer.sendSync('categorias:datos'))
+      $("#numbers-categorias").text(ipcRenderer.sendSync('categorias:datos'));
+    }
+
+    function limpiar_modal_categoria() {
+      $("#div_tipo").find('select option:first-child').attr('selected', 'selected');
+      $("#radio_categoria").prop("checked", true);
+      $('#nom-cat').val("");
+      $("#div_tipo").addClass("none");
+    }
+    function formatearNumero(nStr) {
+      nStr += '';
+      var amt = parseFloat(nStr);
+      var a = amt.toFixed(2);
+      x = a.split('.');
+      x1 = x[0];
+      x2 = x.length > 1 ? ',' + x[1] : '';
+      var rgx = /(\d+)(\d{3})/;
+      while (rgx.test(x1)) {
+        x1 = x1.replace(rgx, '$1' + '.' + '$2');
+      }
+      return x1 + x2;
+    }
+    </script>
+    <div class="wrapper"></div>
+
+    <div id="modal_producto" class="modal fade" data-backdrop="static" data-keyboard="false"aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Producto Nuevo</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <form>
+            <div class="modal-body">
+              <div class="form-row align-items-center">
+                <label for="cod-prod" class="col-3"><i class="fas fa-barcode"></i> Código</label>
+                <input type="text" id="cod-prod" class="form-control col-3" aria-describedby="cod-prod" maxlength="5">
+                <small id="cod-prod-help" class="text-muted col-auto">
+                  Máximo de 5 caracteres.
+                </small>
+              </div>
+              <div class="form-row align-items-center">
+                <label for="nom-prod" class="col-3"><i class="fab fa-product-hunt"></i> Nombre</label>
+                <input type="text" id="nom-prod" class="form-control col-6" aria-describedby="nom-prod" maxlength="70">
+              </div>
+              <div class="form-row align-items-center">
+                <label for="select-categorias" class="col-3"><i class="fas fa-tag"></i> Categoría</label>
+                <select class="js-categoria js-example-responsive" id="select-categorias" style="width: 50%"></select>
+                <script>
+                $('.js-categoria').select2({
+                  placeholder: 'Seleccione',
+                  allowClear: true,
+                  width: 'resolve'
+                });
+                </script>
+              </div>
+              <div class="form-row align-items-center">
+                <label for="precio-prod" class="col-3"><i class="far fa-money-bill-alt"></i> Precio</label>
+                <input type="text" id="precio-prod" class="form-control col-3 text-right" aria-describedby="precio-prod" maxlength="9" placeholder="$ 0,00">
+              </div>
+              <div class="form-row align-items-center">
+                <label for="stock-prod" class="col-3"><i class="fas fa-archive"></i> Stock</label>
+                <input type="number" min="1" value="1" id="stock-prod" class="form-control col-3 text-right" aria-describedby="stock-prod">
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-dark" data-dismiss="modal"><i class="fas fa-times"></i></button>
+              <button type="button" class="btn btn-primary"><i class="far fa-save"></i></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-categoria" class="modal fade" data-backdrop="static" data-keyboard="false" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Categoría Nueva</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <form id="form-categoria" class="needs-validation" novalidate>
+            <div class="modal-body">
+              <div class="row" style="margin:0px">
+                <div class="col-6" style="padding:0px;">
+                  <div>
+                    <input type="radio" name="tipo" id="radio_categoria" class="radio" checked/>
+                    <label class="radio" for="radio_categoria">Categoría</label>
+                  </div>
+                </div>
+                <div class="col-6" style="padding:0px;">
+                  <div>
+                    <input type="radio" name="tipo" id="radio_subcategoria" class="radio"/>
+                    <label class="radio" for="radio_subcategoria">Sub categoría</label>
+                  </div>
+                </div>
+              </div>
+              <hr/>
+              <div class="row form-group">
+                <div class="col">
+                  <label for="nom-cat"><i class="fab fa-product-hunt"></i> Nombre</label>
+                  <input type="text" id="nom-cat" class="form-control" aria-describedby="nom-cat" maxlength="70" required>
+                </div>
+              </div>
+              <div class="form-row align-items-center none" id="div_tipo">
+                <label for="select-categorias-padre" class="col-3"><i class="fas fa-tag"></i> Categoría</label>
+                <select class="js-categoria js-example-responsive" id="select-categorias-padre" style="width: 50%"><option>asdad</option><option>asdadddd</option></select>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-dark" data-dismiss="modal"><i class="fas fa-times"></i></button>
+              <button type="submit" class="btn btn-primary"><i class="far fa-save"></i></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-categoria_ver" class="modal fade" role="dialog" data-backdrop="static" data-keyboard="false" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Categoría</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <form id="form-categoria-ver" class="needs-validation" novalidate></form>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-categoria_listado" class="modal fade bd-example-modal-lg modal-fullscreen" data-backdrop="static" data-keyboard="false" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Categorías</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>Para los elementos marcados <i class="fas fa-pencil-alt text-warning" title="Editar" data-toggle="tooltip" data-placement="top" onclick="editar_categorias();"></i> <i class="fas fa-trash-alt text-danger" onclick="eliminar_categorias();" title="Eliminar" data-toggle="tooltip" data-placement="top"></i></p><br>
+            <table class="table table-bordered table-striped" style="margin-bottom:0px">
+              <thead>
+                <tr>
+                  <th class="text-center" scope="col" style="cursor:pointer;" title="Seleccionar/Deseleccionar todos" data-toggle="tooltip" data-placement="right" onclick="categorias_seleccionar()">-</th>
+                  <th class="text-center" scope="col">#</th>
+                  <th class="text-center" scope="col">Nombre</th>
+                  <th class="text-center" scope="col">Tipo</th>
+                  <th class="text-center" scope="col">F. creación</th>
+                </tr>
+              </thead>
+              <tbody id="modal-tabla_categorias"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    var form = document.getElementById('form-categoria');
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+      validar_form(form);
+    }, false);
+    function validar_form(form) {
+      if (form.checkValidity() === false) {
+        console.log("FALTA");
+        var elements = form.elements;
+        for (var i = 0, len = elements.length; i < len; ++i) {
+          if(elements[i].required == true)
+          console.log(elements[i])
+        }
+      }
+
+      event.stopPropagation();
+    }
+    /*form.addEventListener('submit', function(event) {
+      form.classList.add('was-validated');
+      event.preventDefault();
+      if (form.checkValidity() === false) {
+        event.stopPropagation();
+        return;
+      }
+      var elements = form.elements;
+      for (var i = 0, len = elements.length; i < len; ++i) {
+        elements[i].disabled = true;
+      }
+      var padre = 0;
+      const nombre = form.querySelector('#nom-cat').value;
+      if(form.querySelector("#radio_subcategoria").checked)
+        padre = form.querySelector('#select-categorias-padre').value;
+      var datos = {"nombre" : nombre, "padre" : padre};
+      ipcRenderer.send('categoria:alta',datos);
+
+      event.stopPropagation();
+    }, false);*/
+    </script>
+  </body>
+</html>

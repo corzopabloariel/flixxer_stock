@@ -1,0 +1,32 @@
+<div class="arrow-menu" data-off>
+  <i class="fas fa-chevron-right"></i>
+</div>
+<div class="sidebar" data-background-color="white">
+  <div class="sidebar-wrapper">
+    <div class="arrow-menu" data-on>
+      <i class="fas fa-chevron-left"></i>
+    </div>
+    <div class="logo">
+      <a href="#" class="simple-text">flixxer</a>
+    </div>
+    <ul class="nav-ul">
+      <li><a href="main.main.html"><p><i class="fas fa-home"></i>principal</p></a></li>
+      <li class="active"><a><p><i class="fas fa-user"></i>perfil</p></a></li>
+      <li><a href="main.datos.html"><p><i class="fas fa-archive"></i>datos</p></a></li>
+      <li class="bottom"><a onclick="ipcRenderer.send('cerrarSession');" style="cursor:pointer"><p><i class="fas fa-sign-out-alt"></i>salir</p></a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="main-panel">
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <a href="#" class="navbar-brand">Perfil</a>
+      </div>
+    </div>
+  </nav>
+  <div class="content">
+    <div class="container-fluid" id="perfil_html"></div>
+  </div>
+</div>

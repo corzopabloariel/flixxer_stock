@@ -1,0 +1,94 @@
+<div class="arrow-menu" data-off>
+  <i class="fas fa-chevron-right"></i>
+</div>
+<div class="sidebar" data-background-color="white">
+  <div class="sidebar-wrapper">
+    <div class="arrow-menu" data-on>
+      <i class="fas fa-chevron-left"></i>
+    </div>
+    <div class="logo">
+      <a href="#" class="simple-text">flixxer</a>
+    </div>
+    <ul class="nav-ul">
+      <li><a href="main.main.html"><p><i class="fas fa-home"></i>principal</p></a></li>
+      <li><a href="main.perfil.html"><p><i class="fas fa-user"></i>perfil</p></a></li>
+      <li class="active"><a><p><i class="fas fa-archive"></i>datos</p></a></li>
+      <li class="bottom"><a onclick="ipcRenderer.send('cerrarSession');" style="cursor:pointer"><p><i class="fas fa-sign-out-alt"></i>salir</p></a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="main-panel">
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <a href="#" class="navbar-brand">Datos</a>
+      </div>
+    </div>
+  </nav>
+  <div class="content">
+    <div class="container-fluid">
+
+      <div class="row">
+        <div class="col">
+          <div class="card">
+            <div class="header">
+              <h4 class="title">Productos</h4>
+            </div>
+            <div class="content">
+              <table class="table table-hover" style="margin-bottom:0px">
+                <thead>
+                  <tr>
+                    <th class="text-center" scope="col">Código</th>
+                    <th class="text-center" scope="col">Categoría</th>
+                    <th class="text-center" scope="col">Nombre</th>
+                    <th class="text-center" scope="col">Proveedor</th>
+                    <th class="text-center" scope="col">Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th>XXX</th>
+                    <td>XXX</td>
+                    <td>XXX</td>
+                    <td>XXX</td>
+                    <td class="text-center">XX</td>
+                  </tr>
+                  <tr>
+                    <th>XXX</th>
+                    <td>XXX</td>
+                    <td>XXX</td>
+                    <td>XXX</td>
+                    <td class="text-center">XX</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <div class="card">
+            <div class="header">
+              <h4 class="title">Categorías</h4>
+            </div>
+            <div class="content table-responsive table-full-width">
+              <table class="table table-bordered table-striped" style="margin-bottom:0px">
+                <thead>
+                  <tr>
+                    <th class="text-center" scope="col">Nombre</th>
+                    <th class="text-center" scope="col">Tipo</th>
+                    <th class="text-center" scope="col">F. creación</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-categorias"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
